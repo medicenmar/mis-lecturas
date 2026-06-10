@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mis lecturas</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f4f0;
+    --bg3: #eceae4;
+    --text: #1a1a18;
+    --text2: #5f5e5a;
+    --text3: #888780;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.2);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #262624;
+      --bg3: #2e2e2b;
+      --text: #f0ede6;
+      --text2: #a8a69e;
+      --text3: #6a6860;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  h1 { font-size: 24px; font-weight: 500; }
+  .subtitle { font-size: 14px; color: var(--text2); margin-top: 4px; }
+  .stats { display: flex; gap: 12px; margin: 1.25rem 0; flex-wrap: wrap; }
+  .stat { background: var(--bg2); border-radius: var(--radius); padding: 0.75rem 1rem; flex: 1; min-width: 80px; }
+  .stat-num { font-size: 22px; font-weight: 500; }
+  .stat-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .filters-row { display: flex; gap: 8px; margin: 1.25rem 0 0.5rem; flex-wrap: wrap; align-items: center; }
+  input[type=text], select {
+    font-size: 13px; padding: 7px 11px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border2);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--text3); }
+  input[type=text] { flex: 1; min-width: 180px; }
+  .pill {
+    font-size: 12px; padding: 5px 13px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    background: var(--bg);
+    color: var(--text2);
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--text3); color: var(--text); }
+  .pill.active { background: var(--bg3); color: var(--text); border-color: var(--text3); font-weight: 500; }
+  .section-label { font-size: 11px; color: var(--text3); letter-spacing: 0.05em; margin: 0.9rem 0 0.4rem; }
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .active-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 0.5rem 0; align-items: center; min-height: 0; }
+  .active-tag {
+    font-size: 11px; padding: 3px 8px 3px 10px;
+    border-radius: 20px;
+    background: var(--bg3);
+    color: var(--text);
+    border: 0.5px solid var(--border2);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .active-tag button { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 14px; line-height: 1; padding: 0; }
+  .clear-all { font-size: 11px; color: var(--text3); cursor: pointer; text-decoration: underline; margin-left: 2px; }
+  .results-count { font-size: 13px; color: var(--text2); margin: 0.5rem 0 0.75rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .book-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .book-card:hover { border-color: var(--border2); }
+  .cover {
+    width: 100%; aspect-ratio: 2/3;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cover img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+  .cover-ph { font-weight: 500; font-size: 14px; color: var(--text2); z-index: 1; }
+  .fav-badge {
+    position: absolute; top: 6px; right: 6px; z-index: 2;
+    background: #FAEEDA; color: #854F0B;
+    font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500;
+  }
+  .book-info { padding: 8px 10px; }
+  .book-title { font-size: 12px; font-weight: 500; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .book-author { font-size: 11px; color: var(--text2); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .book-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .book-year { font-size: 11px; color: var(--text3); }
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--text3); font-size: 14px; grid-column: 1/-1; }
+  /* Modal */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    max-width: 460px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+    position: relative;
+  }
+  .modal-inner { display: flex; gap: 1.25rem; padding: 1.25rem; }
+  .modal-cover { width: 110px; flex-shrink: 0; aspect-ratio: 2/3; background: var(--bg2); border-radius: var(--radius); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .modal-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-ttl { font-size: 16px; font-weight: 500; line-height: 1.35; }
+  .modal-auth { font-size: 13px; color: var(--text2); margin-top: 5px; }
+  .modal-stars { font-size: 14px; margin-top: 8px; }
+  .modal-row { display: flex; gap: 1rem; margin-top: 8px; font-size: 13px; color: var(--text2); }
+  .modal-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .tag { font-size: 11px; padding: 3px 9px; border-radius: 10px; background: var(--bg2); color: var(--text2); }
+  .close-btn { position: absolute; top: 0.9rem; right: 0.9rem; background: none; border: none; cursor: pointer; color: var(--text2); font-size: 22px; line-height: 1; }
+  /* Separator */
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 1.25rem 0; }
+  footer { margin-top: 4rem; font-size: 12px; color: var(--text3); text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Mis lecturas</h1>
+<p class="subtitle" id="subtitle"></p>
+
+<div class="stats" id="stats-row"></div>
+<hr />
+
+<div class="filters-row">
+  <input type="text" id="search" placeholder="Buscar título o autor…" oninput="renderGrid()" />
+  <select id="year-filter" onchange="renderGrid()"><option value="">Todos los años</option></select>
+  <select id="lang-filter" onchange="renderGrid()">
+    <option value="">Todos los idiomas</option>
+    <option value="Español">Español</option>
+    <option value="Inglés">Inglés</option>
+  </select>
+  <button class="pill" id="fav-btn" onclick="toggleFav()">Solo favoritos</button>
+</div>
+
+<div class="section-label">Géneros</div>
+<div class="pill-row" id="genre-pills"></div>
+
+<div class="section-label">Rating mínimo</div>
+<div class="pill-row" id="star-pills"></div>
+
+<div class="active-filters" id="active-filters"></div>
+<p class="results-count" id="results-count"></p>
+
+<div class="grid" id="grid"></div>
+
+<footer>Actualizado 2025</footer>
+
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal(null)" aria-label="Cerrar">&times;</button>
+    <div class="modal-inner" id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+const BOOKS_DATA = [
+  {titulo:"Todos los días son nuestros",autor:"Catalina Aguilar Mastretta",favorito:"Favorito",fecha:"2020",generos:"Autoras latinoamericanas, Ficción",idioma:"Español",rating:5},
+  {titulo:"El invencible verano de Liliana",autor:"Cristina Rivera Garza",favorito:"Favorito",fecha:"2021",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:5},
+  {titulo:"Casas vacías",autor:"Brenda Navarro",favorito:"Favorito",fecha:"2024",generos:"Autoras latinoamericanas, Ficción, Sobre maternidades",idioma:"Español",rating:5},
+  {titulo:"Norwegian Wood",autor:"Haruki Murakami",favorito:"",fecha:"2021",generos:"Ficción",idioma:"Inglés",rating:2},
+  {titulo:"El ABC del género",autor:"Mariana Gabarrot",favorito:"",fecha:"2023",generos:"Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"The rules do not apply",autor:"Ariel Levy",favorito:"",fecha:"2022",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Mujeres del alma mía",autor:"Isabel Allende",favorito:"",fecha:"2020",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:5},
+  {titulo:"Mexicanas en pie de lucha",autor:"Nayeli Roldán",favorito:"",fecha:"2022",generos:"Autoras latinoamericanas, Ensayos, No ficción, Periodismo, Política, Sociología/Estudios de género y feminismo",idioma:"Español",rating:5},
+  {titulo:"The Celebrants",autor:"Steven Rowley",favorito:"Favorito",fecha:"2023",generos:"Easy read, Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Just for the Summer",autor:"Abby Jimenez",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"The Will of the Many",autor:"James Islington",favorito:"",fecha:"2025",generos:"Fantasía, Ficción",idioma:"Inglés",rating:3},
+  {titulo:"Just Kids",autor:"Patti Smith",favorito:"Favorito",fecha:"2023",generos:"Autobiografía/Memoir, No ficción, Queer story",idioma:"Inglés",rating:5},
+  {titulo:"The Vanishing Half",autor:"Brit Bennett",favorito:"",fecha:"2021",generos:"Ficción, Queer story",idioma:"Inglés",rating:5},
+  {titulo:"La cabeza de mi padre",autor:"Alma Delia Murillo",favorito:"Favorito",fecha:"2022",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción",idioma:"Español",rating:5},
+  {titulo:"James",autor:"Percival Everett",favorito:"Favorito",fecha:"2025",generos:"Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Lo que no tiene nombre",autor:"Piedad Bonnett",favorito:"Favorito",fecha:"2025",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sobre maternidades",idioma:"Español",rating:5},
+  {titulo:"Fruto",autor:"Daniela Rea",favorito:"Favorito",fecha:"2025",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Periodismo, Sobre maternidades, Sociología/Estudios de género y feminismo",idioma:"Español",rating:5},
+  {titulo:"Kitchen Confidential",autor:"Anthony Bourdain",favorito:"",fecha:"2025",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"Ready Player One",autor:"Ernest Cline",favorito:"",fecha:"2021",generos:"Fantasía, Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Call me by your name",autor:"André Aciman",favorito:"",fecha:"2020",generos:"Ficción, Queer story",idioma:"Inglés",rating:4},
+  {titulo:"Animal Farm",autor:"George Orwell",favorito:"",fecha:"2021",generos:"Ficción, Política",idioma:"Inglés",rating:3},
+  {titulo:"Shoe Dog",autor:"Phil Knight",favorito:"",fecha:"2020",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:3},
+  {titulo:"My Brilliant Friend",autor:"Elena Ferrante",favorito:"",fecha:"2024",generos:"Ficción, Sobre amistades",idioma:"Inglés",rating:3},
+  {titulo:"Americanah",autor:"Chimamanda Ngozi Adichie",favorito:"",fecha:"2022",generos:"Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Writers & Lovers",autor:"Lily King",favorito:"Favorito",fecha:"2022",generos:"Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Before the coffee gets cold",autor:"Toshikazu Kawaguchi",favorito:"",fecha:"2022",generos:"Fantasía, Ficción",idioma:"Inglés",rating:3},
+  {titulo:"Blue sisters",autor:"Coco Mellors",favorito:"Favorito",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Hunger: A Memoir of (My) Body",autor:"Roxane Gay",favorito:"Favorito",fecha:"2021",generos:"Autobiografía/Memoir, No ficción, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:5},
+  {titulo:"Know My Name",autor:"Chanel Miller",favorito:"Favorito",fecha:"2021",generos:"Autobiografía/Memoir, No ficción, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:5},
+  {titulo:"Tell me how it ends",autor:"Valeria Luiselli",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, Autoras latinoamericanas, Ensayos, No ficción, Periodismo",idioma:"Inglés",rating:5},
+  {titulo:"Perras de reserva",autor:"Dahlia de la Cerda",favorito:"",fecha:"2023",generos:"Autoras latinoamericanas, Compilación de historias, Ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:5},
+  {titulo:"Desde los zulos",autor:"Dahlia de la Cerda",favorito:"",fecha:"2025",generos:"Ensayos, No ficción, Política, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"Deep Cuts",autor:"Holly Brickley",favorito:"",fecha:"2025",generos:"Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Funny you should ask",autor:"Elissa Sussman",favorito:"",fecha:"2022",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Educated",autor:"Tara Westover",favorito:"",fecha:"",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"Trick Mirror",autor:"Gia Tolentino",favorito:"",fecha:"2021",generos:"Ensayos, No ficción, Periodismo",idioma:"Inglés",rating:4},
+  {titulo:"Little Fires Everywhere",autor:"Celest Ng",favorito:"",fecha:"2020",generos:"Ficción, Sobre maternidades",idioma:"Inglés",rating:4},
+  {titulo:"Becoming",autor:"Michelle Obama",favorito:"",fecha:"2020",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"Little Women",autor:"Louisa May Alcott",favorito:"Favorito",fecha:"2020",generos:"Clásico, Ficción, Sobre dinámicas familiares",idioma:"Inglés",rating:5},
+  {titulo:"Pride and Prejudice",autor:"Jane Austen",favorito:"Favorito",fecha:"2020",generos:"Clásico, Ficción, Romance",idioma:"Inglés",rating:5},
+  {titulo:"¿Será que soy feminista?",autor:"Alma Guillermoprieto",favorito:"",fecha:"2021",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"Dolor y política",autor:"Martha Lamas",favorito:"",fecha:"2021",generos:"Autoras latinoamericanas, Ensayos, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"The inexplicable logic of my life",autor:"Benjamin Alire Saenz",favorito:"Favorito",fecha:"2020",generos:"Ficción, Queer story",idioma:"Inglés",rating:5},
+  {titulo:"Everything I know about love",autor:"Dolly Alderton",favorito:"Favorito",fecha:"2020",generos:"Autobiografía/Memoir, Easy read, No ficción, Sobre amistades",idioma:"Inglés",rating:5},
+  {titulo:"Ghosts",autor:"Dolly Alderton",favorito:"",fecha:"2021",generos:"Ficción, Romance",idioma:"Inglés",rating:3},
+  {titulo:"Let me tell you what I mean",autor:"Joan Didion",favorito:"",fecha:"2022",generos:"Autobiografía/Memoir, Ensayos, No ficción, Periodismo",idioma:"Inglés",rating:4},
+  {titulo:"It's kind of a funny story",autor:"Ned Vizzini",favorito:"Favorito",fecha:"2021",generos:"Easy read, Ficción, Sobre amistades",idioma:"Inglés",rating:5},
+  {titulo:"Transporte a la infancia",autor:"Frida Cartas",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción, Queer story, Sociología/Estudios de género y feminismo",idioma:"Español",rating:3},
+  {titulo:"Happy Place",autor:"Emily Henry",favorito:"",fecha:"2023",generos:"Ficción, Sobre amistades",idioma:"Inglés",rating:5},
+  {titulo:"People we meet on vacation",autor:"Emily Henry",favorito:"",fecha:"2021",generos:"Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Beach Read",autor:"Emily Henry",favorito:"",fecha:"2020",generos:"Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Funny Story",autor:"Emily Henry",favorito:"",fecha:"2025",generos:"Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Great Big Beautiful Life",autor:"Emily Henry",favorito:"",fecha:"2025",generos:"Ficción",idioma:"Inglés",rating:3},
+  {titulo:"Book Lovers",autor:"Emily Henry",favorito:"",fecha:"2022",generos:"Ficción",idioma:"Inglés",rating:3},
+  {titulo:"A heart that works",autor:"Rob Delaney",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"The Hunger Games",autor:"Suzanne Collins",favorito:"Favorito",fecha:"2024",generos:"Fantasía, Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Literatura infantil",autor:"Alejandro Zambra",favorito:"Favorito",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Español",rating:5},
+  {titulo:"The Third Gilmore Girl",autor:"Kelly Bishop",favorito:"Favorito",fecha:"2024",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"Beautiful World Where Are You",autor:"Sally Rooney",favorito:"Favorito",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Normal People",autor:"Sally Rooney",favorito:"Favorito",fecha:"2020",generos:"Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Talking as Fast as I Can",autor:"Lauren Graham",favorito:"",fecha:"2020",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"Where the Crawdads Sing",autor:"Delia Owens",favorito:"",fecha:"2022",generos:"Ficción, Sobre dinámicas familiares",idioma:"Inglés",rating:3},
+  {titulo:"Conversations on Love",autor:"Natasha Lunn",favorito:"",fecha:"2024",generos:"Autobiografía/Memoir, Ensayos, No ficción, Periodismo, Sobre amistades, Sobre dinámicas familiares",idioma:"Inglés",rating:4},
+  {titulo:"Come and Get It",autor:"Riley Keid",favorito:"",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:2},
+  {titulo:"Maybe You Should Talk to Someone",autor:"Lori Gottlieb",favorito:"",fecha:"2020",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Onyx Storm",autor:"Rebecca Yarros",favorito:"",fecha:"2025",generos:"Easy read, Fantasía, Ficción, Romance, Sobre amistades",idioma:"Inglés",rating:2},
+  {titulo:"Twilight",autor:"Stephanie Meyer",favorito:"",fecha:"2025",generos:"Easy read, Fantasía, Ficción",idioma:"Inglés",rating:2},
+  {titulo:"Daydream",autor:"Hannah Grace",favorito:"",fecha:"2025",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:2},
+  {titulo:"Sunrise on the Reaping",autor:"Suzanne Collins",favorito:"Favorito",fecha:"2025",generos:"Fantasía, Ficción, Sobre amistades, Sobre dinámicas familiares",idioma:"Inglés",rating:5},
+  {titulo:"And They Were Roommates",autor:"Page Powars",favorito:"",fecha:"2025",generos:"Easy read, Ficción, Queer story, Romance",idioma:"Inglés",rating:3},
+  {titulo:"The Great Believers",autor:"Rebecca Makkai",favorito:"",fecha:"2025",generos:"Ficción, Queer story, Sobre amistades",idioma:"Inglés",rating:4},
+  {titulo:"De Todas Las Flores",autor:"Natalia Lafourcade",favorito:"",fecha:"2025",generos:"Autobiografía/Memoir, Ensayos, No ficción, Periodismo",idioma:"Español",rating:4},
+  {titulo:"The Seven Year Slip",autor:"Ashley Poston",favorito:"Favorito",fecha:"2024",generos:"Easy read, Fantasía, Ficción, Romance, Sobre dinámicas familiares",idioma:"Inglés",rating:5},
+  {titulo:"The Lightning Thief",autor:"Rick Riordan",favorito:"",fecha:"2024",generos:"Easy read, Fantasía, Ficción",idioma:"Inglés",rating:4},
+  {titulo:"The Sea of Monsters",autor:"Rick Riordan",favorito:"",fecha:"2024",generos:"Easy read, Fantasía, Ficción",idioma:"Inglés",rating:3},
+  {titulo:"White Nights",autor:"Fyodor Dostoevsky",favorito:"",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Yellowface",autor:"R.F. Kuang",favorito:"",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:3},
+  {titulo:"Politics and the English Language",autor:"George Orwell",favorito:"",fecha:"2024",generos:"No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Después del invierno",autor:"Guadalupe Nettel",favorito:"",fecha:"2024",generos:"Autoras latinoamericanas, Ficción, Sobre maternidades",idioma:"Español",rating:4},
+  {titulo:"Dios fulmine a la que escriba sobre mí",autor:"Aura García-Junco",favorito:"Favorito",fecha:"2024",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sobre dinámicas familiares",idioma:"Español",rating:5},
+  {titulo:"Cartas de amor y rebeldía",autor:"Lydia Cacho",favorito:"",fecha:"2024",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:3},
+  {titulo:"Tom Lake",autor:"Ann Patchett",favorito:"",fecha:"2024",generos:"Easy read, Ficción",idioma:"Inglés",rating:4},
+  {titulo:"A Novel Story",autor:"Ashley Poston",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:3},
+  {titulo:"I Want to Die But I Want to Eat Tteokpokki",autor:"Baek Se-hee",favorito:"",fecha:"2024",generos:"Ficción",idioma:"Inglés",rating:2},
+  {titulo:"En agosto nos vemos",autor:"Gabriel García Márquez",favorito:"",fecha:"2024",generos:"Ficción",idioma:"Español",rating:3},
+  {titulo:"Good material",autor:"Dolly Alderton",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:3},
+  {titulo:"Greedy",autor:"Jen Winston",favorito:"",fecha:"2024",generos:"Ensayos, No ficción, Queer story",idioma:"Inglés",rating:4},
+  {titulo:"I Hope This Finds You Well",autor:"Natalie Sue",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Smart Brevity",autor:"Jim Vandehei",favorito:"",fecha:"2024",generos:"No ficción",idioma:"Inglés",rating:4},
+  {titulo:"Heartstopper",autor:"Alice Oseman",favorito:"Favorito",fecha:"2024",generos:"Easy read, Ficción, Queer story, Romance, Sobre amistades",idioma:"Inglés",rating:5},
+  {titulo:"Elizabeth of East Hampton",autor:"Audrey Bellezza",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:3},
+  {titulo:"Sandwich",autor:"Elizabeth Newman",favorito:"Favorito",fecha:"2024",generos:"Easy read, Ficción",idioma:"Inglés",rating:5},
+  {titulo:"Mis amigas están cansadas",autor:"Iveth Luna Flores",favorito:"",fecha:"2024",generos:"Poesía, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"Life's Short Talk Fast",autor:"Ann Hood",favorito:"",fecha:"2024",generos:"Easy read, Ensayos, No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Better than the movies",autor:"Lynn Painter",favorito:"Favorito",fecha:"2023",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:5},
+  {titulo:"Nothing like the movies",autor:"Lynn Painter",favorito:"",fecha:"2024",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:2},
+  {titulo:"Iron Flame",autor:"Rebecca Yarros",favorito:"",fecha:"2023",generos:"Easy read, Fantasía, Ficción",idioma:"Inglés",rating:2},
+  {titulo:"Fourth Wing",autor:"Rebecca Yarros",favorito:"",fecha:"2023",generos:"Easy read, Fantasía, Ficción",idioma:"Inglés",rating:4},
+  {titulo:"Body Work",autor:"Melissa Febos",favorito:"",fecha:"2023",generos:"Ensayos, No ficción, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:4},
+  {titulo:"Ejaculate Responsibly",autor:"Gabrielle Blair",favorito:"",fecha:"2023",generos:"No ficción, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:3},
+  {titulo:"The Ballad of Songbirds and Snakes",autor:"Suzanne Collins",favorito:"",fecha:"2023",generos:"Fantasía, Ficción",idioma:"Inglés",rating:4},
+  {titulo:"The Five-Star Weekend",autor:"Elin Hilderbrand",favorito:"",fecha:"2023",generos:"Easy read, Ficción, Sobre amistades",idioma:"Inglés",rating:3},
+  {titulo:"Part of Your World",autor:"Abby Jimenez",favorito:"",fecha:"2023",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Yours Truly",autor:"Abby Jimenez",favorito:"",fecha:"2023",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Born a Crime",autor:"Trevor Noah",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"The Last Thing He Told Me",autor:"Laura Dave",favorito:"",fecha:"2023",generos:"Ficción",idioma:"Inglés",rating:2},
+  {titulo:"I'm Glad My Mom Died",autor:"Jennette McCurdy",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"The Girl with the Lower Back Tattoo",autor:"Amy Schumer",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Dear Dolly",autor:"Dolly Alderton",favorito:"",fecha:"2023",generos:"Compilación de historias, No ficción, Periodismo",idioma:"Inglés",rating:3},
+  {titulo:"Finding Me",autor:"Viola Davis",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, No ficción",idioma:"Inglés",rating:5},
+  {titulo:"Romantic Comedy",autor:"Curtis Sittenfeld",favorito:"",fecha:"2023",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Por qué volvías cada verano",autor:"Belén López Peiró",favorito:"",fecha:"2023",generos:"Autobiografía/Memoir, Autoras latinoamericanas, No ficción, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4},
+  {titulo:"You're the Only One I've Told",autor:"Meera Shah",favorito:"",fecha:"2023",generos:"Ensayos, No ficción, Periodismo, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:3},
+  {titulo:"The Seven Husbands of Evelyn Hugo",autor:"Taylor Jenkins Reid",favorito:"",fecha:"2022",generos:"Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Daisy Jones & The Six",autor:"Taylor Jenkins Reid",favorito:"",fecha:"2022",generos:"Easy read, Ficción",idioma:"Inglés",rating:5},
+  {titulo:"How to Fail",autor:"Elizabeth Day",favorito:"",fecha:"2022",generos:"No ficción",idioma:"Inglés",rating:3},
+  {titulo:"My Body",autor:"Emily Ratajkowski",favorito:"",fecha:"2022",generos:"Ensayos, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"No One Is Talking About This",autor:"Patricia Lockwood",favorito:"",fecha:"2022",generos:"Ensayos, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"Love and Other Words",autor:"Christina Lauren",favorito:"",fecha:"2022",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:4},
+  {titulo:"Every Summer After",autor:"Carley Fortune",favorito:"",fecha:"2022",generos:"Easy read, Ficción, Romance",idioma:"Inglés",rating:3},
+  {titulo:"Everything I Never Told You",autor:"Celeste Ng",favorito:"",fecha:"2022",generos:"Ficción, Sobre dinámicas familiares",idioma:"Inglés",rating:3},
+  {titulo:"Good Talk",autor:"Mira Jacob",favorito:"",fecha:"2022",generos:"Autobiografía/Memoir, Easy read, No ficción",idioma:"Inglés",rating:4},
+  {titulo:"The Defining Decade",autor:"Meg Jay",favorito:"",fecha:"2021",generos:"No ficción",idioma:"Inglés",rating:3},
+  {titulo:"Such a Fun Age",autor:"Kiley Reid",favorito:"",fecha:"2021",generos:"Ficción",idioma:"Inglés",rating:3},
+  {titulo:"Period Power",autor:"Nadya Okamoto",favorito:"",fecha:"2020",generos:"No ficción, Sociología/Estudios de género y feminismo",idioma:"Inglés",rating:5},
+  {titulo:"It Ends With Us",autor:"Colleen Hoover",favorito:"",fecha:"2021",generos:"Ficción, Romance",idioma:"Inglés",rating:1},
+  {titulo:"Perreo una revolución",autor:"Cazzu",favorito:"",fecha:"2025",generos:"Autobiografía/Memoir, Ensayos, No ficción, Periodismo, Sociología/Estudios de género y feminismo",idioma:"Español",rating:4}
+];
+
+const allGenres = [...new Set(BOOKS_DATA.flatMap(b => b.generos.split(',').map(g=>g.trim())))].filter(Boolean).sort();
+const allYears = [...new Set(BOOKS_DATA.map(b=>b.fecha).filter(Boolean))].sort((a,b)=>b-a);
+const coverCache = {};
+const paleta = ['#E1F5EE','#EEEDFE','#FAECE7','#E6F1FB','#FAEEDA','#FBEAF0'];
+
+let activeGenres = new Set();
+let minStars = 0;
+let showFav = false;
+
+// Init
+document.getElementById('subtitle').textContent = `${BOOKS_DATA.length} libros registrados`;
+
+const sr = document.getElementById('stats-row');
+const favCount = BOOKS_DATA.filter(b=>b.favorito==='Favorito').length;
+const fiveStars = BOOKS_DATA.filter(b=>b.rating===5).length;
+const years = [...new Set(BOOKS_DATA.map(b=>b.fecha).filter(Boolean))];
+sr.innerHTML = `
+  <div class="stat"><div class="stat-num">${BOOKS_DATA.length}</div><div class="stat-label">libros leídos</div></div>
+  <div class="stat"><div class="stat-num">${favCount}</div><div class="stat-label">favoritos</div></div>
+  <div class="stat"><div class="stat-num">${fiveStars}</div><div class="stat-label">5 estrellas</div></div>
+  <div class="stat"><div class="stat-num">${years.length}</div><div class="stat-label">años de lectura</div></div>`;
+
+const yearSel = document.getElementById('year-filter');
+allYears.forEach(y => { const o = document.createElement('option'); o.value=y; o.textContent=y; yearSel.appendChild(o); });
+
+// Genre pills
+const gp = document.getElementById('genre-pills');
+allGenres.forEach(g => {
+  const btn = document.createElement('button');
+  btn.className = 'pill'; btn.textContent = g; btn.setAttribute('data-genre',g);
+  btn.onclick = () => {
+    if(activeGenres.has(g)) activeGenres.delete(g); else activeGenres.add(g);
+    btn.classList.toggle('active', activeGenres.has(g));
+    updateTags(); renderGrid();
+  };
+  gp.appendChild(btn);
+});
+
+// Star pills
+const sp = document.getElementById('star-pills');
+[0,1,2,3,4,5].forEach(n => {
+  const btn = document.createElement('button');
+  btn.className = 'pill' + (n===0?' active':'');
+  btn.setAttribute('data-stars', n);
+  btn.textContent = n===0 ? 'Todos' : '⭐'.repeat(n)+' o más';
+  btn.onclick = () => {
+    minStars = n;
+    document.querySelectorAll('[data-stars]').forEach(b=>b.classList.toggle('active', parseInt(b.getAttribute('data-stars'))===n));
+    updateTags(); renderGrid();
+  };
+  sp.appendChild(btn);
+});
+
+function toggleFav() {
+  showFav = !showFav;
+  document.getElementById('fav-btn').classList.toggle('active', showFav);
+  updateTags(); renderGrid();
+}
+
+function updateTags() {
+  const af = document.getElementById('active-filters');
+  const tags = [];
+  activeGenres.forEach(g => tags.push(`<span class="active-tag">${g}<button onclick="removeGenre('${g.replace(/'/g,"\\'")}')">×</button></span>`));
+  if(minStars>0) tags.push(`<span class="active-tag">${'⭐'.repeat(minStars)}+<button onclick="removeStars()">×</button></span>`);
+  if(showFav) tags.push(`<span class="active-tag">Favoritos<button onclick="toggleFav()">×</button></span>`);
+  if(tags.length>1) tags.push(`<span class="clear-all" onclick="clearAll()">limpiar todo</span>`);
+  af.innerHTML = tags.join('');
+}
+
+function removeGenre(g) {
+  activeGenres.delete(g);
+  const btn = document.querySelector(`[data-genre="${g}"]`);
+  if(btn) btn.classList.remove('active');
+  updateTags(); renderGrid();
+}
+function removeStars() {
+  minStars=0;
+  document.querySelectorAll('[data-stars]').forEach(b=>b.classList.toggle('active',b.getAttribute('data-stars')==='0'));
+  updateTags(); renderGrid();
+}
+function clearAll() {
+  activeGenres.clear();
+  document.querySelectorAll('[data-genre]').forEach(b=>b.classList.remove('active'));
+  minStars=0;
+  document.querySelectorAll('[data-stars]').forEach(b=>b.classList.toggle('active',b.getAttribute('data-stars')==='0'));
+  showFav=false;
+  document.getElementById('fav-btn').classList.remove('active');
+  document.getElementById('year-filter').value='';
+  document.getElementById('lang-filter').value='';
+  document.getElementById('search').value='';
+  updateTags(); renderGrid();
+}
+
+async function fetchCover(titulo, autor) {
+  const key = titulo;
+  if(coverCache[key]!==undefined) return coverCache[key];
+  coverCache[key]=null;
+  try {
+    const q = encodeURIComponent(`${titulo.split(':')[0].substring(0,40)} ${autor.split(',')[0].substring(0,30)}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=3&fields=items(volumeInfo/imageLinks)`);
+    const data = await res.json();
+    if(data.items) {
+      for(const item of data.items) {
+        const img = item.volumeInfo?.imageLinks;
+        if(img) {
+          const url = (img.thumbnail||img.smallThumbnail||'').replace('http://','https://').replace('&edge=curl','').replace('zoom=1','zoom=2');
+          if(url) { coverCache[key]=url; break; }
+        }
+      }
+    }
+  } catch(e){}
+  return coverCache[key];
+}
+
+function initials(t){ return t.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase(); }
+
+function renderGrid() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const yr = document.getElementById('year-filter').value;
+  const lang = document.getElementById('lang-filter').value;
+
+  const filtered = BOOKS_DATA.filter(b => {
+    if(q && !b.titulo.toLowerCase().includes(q) && !b.autor.toLowerCase().includes(q)) return false;
+    if(yr && b.fecha!==yr) return false;
+    if(lang && b.idioma!==lang) return false;
+    if(showFav && b.favorito!=='Favorito') return false;
+    if(minStars>0 && b.rating<minStars) return false;
+    if(activeGenres.size>0){
+      const bg = b.generos.split(',').map(g=>g.trim());
+      for(const g of activeGenres){ if(!bg.includes(g)) return false; }
+    }
+    return true;
+  });
+
+  document.getElementById('results-count').textContent = filtered.length===BOOKS_DATA.length ? '' : `${filtered.length} resultado${filtered.length!==1?'s':''}`;
+  const grid = document.getElementById('grid');
+  grid.innerHTML='';
+
+  if(!filtered.length){ grid.innerHTML='<div class="empty">Sin resultados para esa combinación de filtros.</div>'; return; }
+
+  filtered.forEach((book,idx) => {
+    const isFav = book.favorito==='Favorito';
+    const ini = initials(book.titulo);
+    const card = document.createElement('div');
+    card.className='book-card';
+    card.innerHTML=`
+      <div class="cover" id="cv-${idx}" style="background:${paleta[idx%paleta.length]}">
+        <div class="cover-ph">${ini}</div>
+        ${isFav?'<span class="fav-badge">fav</span>':''}
+      </div>
+      <div class="book-info">
+        <div class="book-title">${book.titulo}</div>
+        <div class="book-author">${book.autor}</div>
+        <div class="book-meta">
+          <span class="book-year">${book.fecha||'—'}</span>
+          <span style="font-size:10px">${'⭐'.repeat(book.rating)}</span>
+        </div>
+      </div>`;
+    card.onclick=()=>openModal(book);
+    grid.appendChild(card);
+
+    fetchCover(book.titulo, book.autor).then(url=>{
+      const el=document.getElementById(`cv-${idx}`);
+      if(url&&el) el.innerHTML=`<img src="${url}" alt="" loading="lazy" onerror="this.style.display='none'" />${isFav?'<span class="fav-badge">fav</span>':''}`;
+    });
+  });
+}
+
+function openModal(book) {
+  const genres = book.generos.split(',').map(g=>g.trim());
+  const isFav = book.favorito==='Favorito';
+  document.getElementById('modal-content').innerHTML=`
+    <div class="modal-cover" id="mcov">
+      <span style="font-size:13px;font-weight:500;color:var(--text2)">${initials(book.titulo)}</span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div class="modal-ttl">${book.titulo}</div>
+        ${isFav?'<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#FAEEDA;color:#854F0B;font-weight:500;flex-shrink:0;margin-top:3px">favorito</span>':''}
+      </div>
+      <div class="modal-auth">${book.autor}</div>
+      <div class="modal-stars">${'⭐'.repeat(book.rating)}</div>
+      <div class="modal-row">
+        <span>📅 ${book.fecha||'Sin fecha'}</span>
+        <span>🌐 ${book.idioma||'—'}</span>
+      </div>
+      <div class="modal-tags">${genres.map(g=>`<span class="tag">${g}</span>`).join('')}</div>
+    </div>`;
+  document.getElementById('overlay').classList.add('open');
+  fetchCover(book.titulo, book.autor).then(url=>{
+    const el=document.getElementById('mcov');
+    if(url&&el) el.innerHTML=`<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" />`;
+  });
+}
+
+function closeModal(e) {
+  if(e===null||e.target===document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('open');
+}
+
+renderGrid();
+</script>
+</body>
+</html>
